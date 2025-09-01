@@ -9,24 +9,35 @@ app.use(cors()); // applying middleware to connect
 app.get("/", (_req, res) => res.send("Chat Server is up .")); //
 
 const server = http.createServer(app);
+app.use(express.json());
 
 const io = new Server(server, {
   cors: {
-    origin: "*",
+    origin: "http://localhost:5173",
     methods: ["GET", "POST"],
   },
 });
+const rooms = {};
 
 io.on("connection", (socket) => {
   console.log("Connected:", socket.id);
 
-  socket.on("join_room", (room) => {
+  socket.on("join-room", (room) => {
     socket.join(room);
     console.log(`${socket.id} joined ${room}`);
+
+    if (!rooms[room]) {
+      rooms[room] = [];
+    }
+    socket.emit("room-messages", rooms[room]);
   });
 
-  socket.on("send_message", (data) => {
-    io.to(data.room).emit("receive_message", data);
+  socket.on("send-message", (msgData) => {
+    const { room } = msgData;
+    if (!rooms[room]) return;
+    const message = { text, id: socket.id };
+    rooms[room].push(msgData);
+    io.to(room).emit("receive-room-message", msgData);
   });
 
   socket.on("disconnect", () => {
